@@ -12,6 +12,8 @@ docs/agents/
 │   ├── modules.md        # NestJS module development patterns
 │   ├── repository.md     # Repository pattern implementation
 │   ├── dto.md            # DTO and Zod validation patterns
+│   ├── controller.md     # Controller and presentation layer
+│   ├── prisma.md         # Prisma and database infrastructure
 │   └── testing.md        # Testing patterns with Bun Test
 └── examples/
     └── new-domain.md     # Step-by-step guide for creating new domains
@@ -33,6 +35,8 @@ docs/agents/
 | Create a new domain/module | `examples/new-domain.md` |
 | Implement data access      | `patterns/repository.md` |
 | Add input validation       | `patterns/dto.md`        |
+| Create API endpoints       | `patterns/controller.md` |
+| Database and Prisma        | `patterns/prisma.md`     |
 | Structure a module         | `patterns/modules.md`    |
 | Write tests                | `patterns/testing.md`    |
 | Understand architecture    | `architecture.md`        |

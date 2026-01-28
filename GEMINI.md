@@ -21,5 +21,7 @@
 | `docs/agents/patterns/modules.md`    | Creating NestJS modules                  |
 | `docs/agents/patterns/repository.md` | Repository pattern implementation        |
 | `docs/agents/patterns/dto.md`        | DTO and Zod validation                   |
+| `docs/agents/patterns/controller.md` | Controller and presentation layer        |
+| `docs/agents/patterns/prisma.md`     | Prisma and database infrastructure       |
 | `docs/agents/patterns/testing.md`    | Testing with Bun Test                    |
 | `docs/agents/examples/new-domain.md` | Step-by-step domain creation             |

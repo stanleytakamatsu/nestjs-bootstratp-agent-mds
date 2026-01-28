@@ -42,7 +42,7 @@ Once the user provides the project name, replace all occurrences of `my-backend`
 | NestJS     | 11.x    | Backend framework                    |
 | Fastify    | 11.x    | HTTP server (faster than Express)    |
 | PostgreSQL | 18.x    | Relational database                  |
-| Prisma     | 7.x     | ORM with type-safe queries           |
+| Prisma     | 7.3.x   | ORM with type-safe queries           |
 | Zod        | 4.x     | Schema validation                    |
 | TypeScript | 5.x     | Type safety                          |
 | Oxlint     | 1.x     | Fast linter                          |
@@ -63,12 +63,13 @@ Once the user provides the project name, replace all occurrences of `my-backend`
   "@nestjs/core": "^11.1.9",
   "@nestjs/platform-fastify": "^11.1.9",
   "@nestjs/swagger": "^11.2.3",
-  "@prisma/adapter-pg": "7.2.0",
-  "@prisma/client": "^7.2.0",
+  "@prisma/adapter-pg": "7.3.0",
+  "@prisma/client": "7.3.0",
   "class-transformer": "^0.5.1",
   "class-validator": "^0.14.3",
   "dotenv": "^17.2.3",
   "nestjs-zod": "^5.0.1",
+  "pg": "^8.16.0",
   "reflect-metadata": "^0.2.2",
   "rxjs": "^7.8.2",
   "zod": "^4.2.1"
@@ -84,9 +85,10 @@ Once the user provides the project name, replace all occurrences of `my-backend`
   "@swc/cli": "^0.7.9",
   "@swc/core": "^1.15.5",
   "@types/node": "^25.0.3",
+  "@types/pg": "^8.15.4",
   "bun-types": "^1.3.6",
   "oxlint": "^1.2.0",
-  "prisma": "7.2.0",
+  "prisma": "7.3.0",
   "ts-node": "^10.9.2",
   "tsconfig-paths": "^4.2.0",
   "typescript": "^5.9.3"
@@ -112,7 +114,7 @@ bun init -y
     "start": "bun nest start",
     "dev": "bun nest start --watch",
     "debug": "bun nest start --debug --watch",
-    "start:prod": "bun dist/index",
+    "start:prod": "bun dist/main",
     "build": "bun nest build",
     "format": "bunx oxfmt src test",
     "format:check": "bunx oxfmt --check src test",
@@ -123,11 +125,23 @@ bun init -y
     "test:cov": "bun test --coverage",
     "prisma:generate": "bun prisma generate",
     "prisma:migrate": "bun prisma migrate dev",
+    "prisma:migrate:deploy": "bun prisma migrate deploy",
+    "prisma:migrate:status": "bun prisma migrate status",
+    "prisma:migrate:reset": "bun prisma migrate reset",
     "prisma:studio": "bun prisma studio",
     "db:push": "bun prisma db push",
-    "db:reset": "bun prisma migrate reset",
-    "docker:stop": "docker-compose down",
-    "docker:clean": "docker-compose down -v"
+    "db:seed": "bun prisma db seed",
+    "docker:up": "docker compose up -d",
+    "docker:up:db": "docker compose up -d db",
+    "docker:up:app": "docker compose up -d app",
+    "docker:down": "docker compose down",
+    "docker:clean": "docker compose down -v",
+    "docker:logs": "docker compose logs -f",
+    "docker:logs:app": "docker compose logs -f app",
+    "docker:logs:db": "docker compose logs -f db",
+    "docker:exec:app": "docker compose exec app sh",
+    "vercel:build": "bun run prisma:generate && bun run build",
+    "vercel:migrate": "bun run prisma:migrate:deploy"
   },
   "dependencies": {
     "@fastify/static": "^8.3.0",
@@ -139,12 +153,13 @@ bun init -y
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-fastify": "^11.1.9",
     "@nestjs/swagger": "^11.2.3",
-    "@prisma/adapter-pg": "7.2.0",
-    "@prisma/client": "^7.2.0",
+    "@prisma/adapter-pg": "7.3.0",
+    "@prisma/client": "7.3.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "dotenv": "^17.2.3",
     "nestjs-zod": "^5.0.1",
+    "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.2.1"
@@ -155,9 +170,10 @@ bun init -y
     "@swc/cli": "^0.7.9",
     "@swc/core": "^1.15.5",
     "@types/node": "^25.0.3",
+    "@types/pg": "^8.15.4",
     "bun-types": "^1.3.6",
     "oxlint": "^1.2.0",
-    "prisma": "7.2.0",
+    "prisma": "7.3.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3"
@@ -172,7 +188,23 @@ bun init -y
 bun install
 ```
 
-### 4. Create tsconfig.json
+### 4. Trust Prisma Postinstall Scripts
+
+Prisma requires postinstall scripts to run. Trust the prisma package:
+
+```bash
+bun pm trust prisma
+bun pm trust @prisma/client
+bun pm trust @prisma/adapter-pg
+```
+
+Then reinstall to run the postinstall scripts:
+
+```bash
+bun install
+```
+
+### 5. Create tsconfig.json
 
 ```json
 {
@@ -204,7 +236,7 @@ bun install
 }
 ```
 
-### 5. Create nest-cli.json
+### 6. Create nest-cli.json
 
 ```json
 {
@@ -219,7 +251,7 @@ bun install
 }
 ```
 
-### 6. Create oxlint.json
+### 7. Create oxlint.json
 
 ```json
 {
@@ -230,16 +262,19 @@ bun install
 }
 ```
 
-### 7. Create docker-compose.yml
+### 8. Create docker-compose.yml
+
+This configuration is for **local development only**. It includes both the PostgreSQL database and the application service with hot-reload support.
 
 ```yaml
 services:
+  # PostgreSQL Database
   db:
     image: postgres:18.1-alpine
     container_name: my-backend-db
     restart: unless-stopped
     ports:
-      - "6432:5432"
+      - "6433:5432"
     environment:
       POSTGRES_DB: my-backend
       POSTGRES_USER: postgres
@@ -251,12 +286,53 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - my-backend-network
+
+  # Application Service (Local Development)
+  app:
+    image: oven/bun:1.3.3-alpine
+    container_name: my-backend-app
+    working_dir: /app
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      APP_NAME: My Backend
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/my-backend
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/my-backend
+    volumes:
+      - .:/app # Mount entire project
+      - /app/node_modules # Exclude node_modules (use container's)
+      - bun_cache:/root/.bun/install/cache # Cache bun packages
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - my-backend-network
+    command: sh -c "bun install && bun run prisma:generate && bun run dev"
 
 volumes:
   postgres_data:
+  bun_cache:
+
+networks:
+  my-backend-network:
+    driver: bridge
 ```
 
-### 8. Create .env.example
+**Key Features:**
+
+- **Volume Mapping**: Your local code is mounted to `/app`, enabling hot-reload
+- **node_modules Exclusion**: Container uses its own node_modules to avoid OS compatibility issues
+- **Bun Cache**: Shared cache volume speeds up subsequent `bun install` runs
+- **Auto Setup**: Runs `bun install`, `prisma:generate`, and `dev` on startup
+
+**Note:** When running the app in Docker, the DATABASE_URL uses `db:5432` (internal Docker network). When running locally outside Docker, use `localhost:6433`.
+
+### 9. Create .env.example
 
 ```env
 # Application
@@ -264,17 +340,38 @@ NODE_ENV=development
 PORT=3001
 APP_NAME=My Backend
 
-# Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:6432/my-backend
+# Database (Local Development - running app outside Docker)
+# Use localhost:6433 when running the app locally with `bun run dev`
+DATABASE_URL=postgresql://postgres:postgres@localhost:6433/my-backend
+DIRECT_URL=postgresql://postgres:postgres@localhost:6433/my-backend
+
+# Database (Docker - running app inside Docker)
+# Use db:5432 when running the app inside Docker with `docker-compose up`
+# Uncomment the lines below and comment out the lines above if running fully in Docker
+# DATABASE_URL=postgresql://postgres:postgres@db:5432/my-backend
+# DIRECT_URL=postgresql://postgres:postgres@db:5432/my-backend
 ```
 
-### 9. Create .env (copy from .env.example)
+**Note:** The docker-compose.yml already sets the correct DATABASE_URL for the containerized app via environment variables. The .env file values are used for local development only.
+
+**Database URL Configuration:**
+
+| Environment     | DATABASE_URL                 | DIRECT_URL                 |
+| --------------- | ---------------------------- | -------------------------- |
+| Local Dev       | `localhost:6433`             | Same as DATABASE_URL       |
+| Docker (app)    | `db:5432` (internal network) | Same as DATABASE_URL       |
+| Neon            | Pooled (`-pooler` hostname)  | Direct (without `-pooler`) |
+| Supabase        | Pooler (port 6543)           | Direct (port 5432)         |
+| Vercel Postgres | Pooled connection            | Direct connection          |
+| Railway         | Direct connection            | Same as DATABASE_URL       |
+
+### 10. Create .env (copy from .env.example)
 
 ```bash
 cp .env.example .env
 ```
 
-### 10. Create Folder Structure
+### 11. Create Folder Structure
 
 ```bash
 mkdir -p src/controllers
@@ -284,19 +381,19 @@ mkdir -p src/shared/pipes
 mkdir -p prisma
 ```
 
-### 11. Create Prisma Schema
+### 12. Create Prisma Schema
+
+For detailed Prisma patterns and conventions, see `docs/agents/patterns/prisma.md`.
 
 **prisma/schema.prisma**
 
 ```prisma
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // Add your models here
@@ -304,25 +401,93 @@ datasource db {
 // model User {
 //   id        String   @id @default(cuid())
 //   email     String   @unique
-//   name      String?
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
+//   firstName String   @map("first_name")
+//   lastName  String   @map("last_name")
+//   status    UserStatus @default(ACTIVE)
+//   createdAt DateTime @default(now()) @map("created_at")
+//   updatedAt DateTime @updatedAt @map("updated_at")
 //
 //   @@map("users")
+//   @@index([status])
+// }
+//
+// enum UserStatus {
+//   ACTIVE
+//   INACTIVE
 // }
 ```
 
-### 12. Create PrismaService
+**Schema Conventions:**
+
+- Model names: PascalCase singular (e.g., `User`, `Post`)
+- Table names: Use `@@map("table_name")` with snake_case plural
+- Field names: camelCase in Prisma, snake_case in DB with `@map()`
+- IDs: Use `cuid()` for string IDs
+- Timestamps: Always include `createdAt` and `updatedAt`
+- Indexes: Add `@@index` for frequently queried fields
+
+**IMPORTANT Prisma 7 Note**: The `url` property is no longer used in the datasource block. Database connection is configured via `prisma.config.ts`.
+
+### 13. Create Prisma Config
+
+**prisma/prisma.config.ts**
+
+```typescript
+import path from "node:path";
+import type { PrismaConfig } from "prisma";
+
+export default {
+  earlyAccess: true,
+  schema: path.join("prisma", "schema.prisma"),
+  migrate: {
+    // Use DIRECT_URL for migrations (bypasses connection poolers in serverless)
+    url: process.env.DIRECT_URL,
+  },
+} satisfies PrismaConfig;
+```
+
+**Why DIRECT_URL?**
+
+In serverless environments (Vercel, Neon, Supabase), database connections often go through a connection pooler (e.g., PgBouncer). While poolers are great for application queries, they don't support the transaction-based operations that Prisma migrations require.
+
+- `DATABASE_URL`: Used by your application at runtime (can use pooled connections)
+- `DIRECT_URL`: Used by Prisma CLI for migrations (must bypass the pooler)
+
+### 14. Create PrismaService
+
+The `PrismaService` is a shared infrastructure class that wraps the Prisma client using the driver adapter pattern for Prisma 7. For detailed patterns and advanced usage, see `docs/agents/patterns/prisma.md`.
 
 **src/shared/infrastructure/database/prisma/prisma.service.ts**
 
 ```typescript
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
+  private pool: Pool;
+
+  constructor() {
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+
+    const adapter = new PrismaPg(pool);
+
+    super({
+      adapter,
+      log: [
+        { emit: "event", level: "query" },
+        { emit: "event", level: "error" },
+        { emit: "event", level: "warn" },
+      ],
+    });
+
+    this.pool = pool;
+  }
 
   async onModuleInit() {
     this.logger.log("Connecting to database...");
@@ -333,6 +498,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async onModuleDestroy() {
     this.logger.log("Disconnecting from database...");
     await this.$disconnect();
+    await this.pool.end();
     this.logger.log("Database disconnected");
   }
 }
@@ -356,7 +522,7 @@ export * from "./prisma";
 export * from "./database";
 ```
 
-### 13. Create ZodValidationPipe
+### 15. Create ZodValidationPipe
 
 **src/shared/pipes/zod-validation.pipe.ts**
 
@@ -373,7 +539,7 @@ export class ZodValidationPipe implements PipeTransform {
       return this.schema.parse(value);
     } catch (error) {
       if (error instanceof ZodError) {
-        const messages = error.errors.map((err) => `${err.path.join(".")}: ${err.message}`);
+        const messages = error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
         throw new BadRequestException({
           message: "Validation failed",
           errors: messages,
@@ -398,7 +564,7 @@ export * from "./infrastructure";
 export * from "./pipes";
 ```
 
-### 14. Create Root Controller
+### 16. Create Root Controller
 
 **src/controllers/root.controller.ts**
 
@@ -461,7 +627,7 @@ export class RootController {
 export * from "./root.controller";
 ```
 
-### 15. Create App Module
+### 17. Create App Module
 
 **src/app.module.ts**
 
@@ -485,9 +651,9 @@ import { PrismaService } from "@/shared/infrastructure/database/prisma/prisma.se
 export class AppModule {}
 ```
 
-### 16. Create Application Entry Point
+### 18. Create Application Entry Point
 
-**src/index.ts**
+**src/main.ts**
 
 ```typescript
 import { NestFactory } from "@nestjs/core";
@@ -527,7 +693,7 @@ async function bootstrap() {
 bootstrap();
 ```
 
-### 17. Create .gitignore
+### 19. Create .gitignore
 
 ```gitignore
 # Dependencies
@@ -556,9 +722,6 @@ logs/
 *.log
 npm-debug.log*
 
-# Prisma
-prisma/migrations/**/migration_lock.toml
-
 # Coverage
 coverage/
 
@@ -568,23 +731,81 @@ bun.lockb
 
 ## Running the Application
 
-### 1. Start PostgreSQL
+### Option A: Local Development (Recommended for Development)
+
+#### 1. Start PostgreSQL Only
 
 ```bash
-docker-compose up -d
+docker compose up -d db
 ```
 
-### 2. Generate Prisma Client
+#### 2. Generate Prisma Client
 
 ```bash
 bun run prisma:generate
 ```
 
-### 3. Start Development Server
+#### 3. Start Development Server
 
 ```bash
 bun run dev
 ```
+
+### Option B: Full Docker Development
+
+Run everything in Docker with volume mapping for hot-reload.
+
+#### 1. Start All Services
+
+```bash
+docker compose up
+```
+
+Or run in detached mode (background):
+
+```bash
+docker compose up -d
+```
+
+This will:
+
+- Start PostgreSQL
+- Start the app container with your code mounted
+- Auto-run `bun install`, `prisma:generate`, and `bun run dev`
+- **Hot-reload enabled**: Changes to your local files are automatically detected
+
+#### 2. Run Migrations (first time or after schema changes)
+
+```bash
+docker compose exec app bun run prisma:migrate
+```
+
+#### 3. View Logs
+
+```bash
+docker compose logs -f
+```
+
+#### 4. Access App Container Shell
+
+```bash
+docker compose exec app sh
+```
+
+### Docker Commands Reference
+
+| Command                      | Description                                     |
+| ---------------------------- | ----------------------------------------------- |
+| `docker compose up`          | Start all services with logs (foreground)       |
+| `docker compose up -d`       | Start all services in background                |
+| `docker compose up -d db`    | Start only PostgreSQL                           |
+| `docker compose up -d app`   | Start only the application                      |
+| `docker compose down`        | Stop all services                               |
+| `docker compose down -v`     | Stop and remove volumes (WARNING: deletes data) |
+| `docker compose logs -f`     | Follow logs for all services                    |
+| `docker compose logs -f app` | Follow logs for app only                        |
+| `docker compose logs -f db`  | Follow logs for database only                   |
+| `docker compose exec app sh` | Open shell inside app container                 |
 
 ## Verification
 
@@ -655,6 +876,63 @@ export class MyService {
 - `logger.debug()` - Debug information
 - `logger.verbose()` - Verbose output
 
+## Serverless Deployment (Vercel, Neon, etc.)
+
+When deploying to serverless platforms, migrations require special handling because connection poolers don't support migration transactions.
+
+### Environment Variables for Serverless
+
+```env
+# Production example with Neon
+DATABASE_URL=postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/mydb?sslmode=require
+DIRECT_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/mydb?sslmode=require
+```
+
+### Running Migrations in CI/CD
+
+**Option 1: Vercel Build Command**
+
+In your Vercel project settings, set the build command to:
+
+```bash
+bun run vercel:build
+```
+
+And add a separate migration step (e.g., in GitHub Actions):
+
+```yaml
+- name: Run migrations
+  run: bun run vercel:migrate
+  env:
+    DIRECT_URL: ${{ secrets.DIRECT_URL }}
+```
+
+**Option 2: Vercel CLI with Migration**
+
+```bash
+# Deploy with migrations
+bun run prisma:migrate:deploy && vercel --prod
+```
+
+### Package.json Scripts Reference
+
+| Script                  | Purpose                                     |
+| ----------------------- | ------------------------------------------- |
+| `prisma:migrate`        | Create new migration (development)          |
+| `prisma:migrate:deploy` | Apply pending migrations (production)       |
+| `prisma:migrate:status` | Check migration status                      |
+| `prisma:migrate:reset`  | Reset database and reapply all migrations   |
+| `vercel:build`          | Generate Prisma client + build (for Vercel) |
+| `vercel:migrate`        | Deploy migrations (for CI/CD)               |
+
+### Checking Migration Status
+
+Before deploying, check if there are pending migrations:
+
+```bash
+bun run prisma:migrate:status
+```
+
 ## Next Steps
 
 1. **Create your first domain** - See `docs/agents/examples/new-domain.md`
@@ -668,7 +946,7 @@ export class MyService {
 
 1. Ensure Docker is running: `docker ps`
 2. Check PostgreSQL container: `docker-compose logs db`
-3. Verify DATABASE_URL in `.env` matches docker-compose settings
+3. Verify DATABASE_URL in `.env` matches docker-compose settings (port 6433)
 
 ### Port Already in Use
 
@@ -679,12 +957,29 @@ lsof -i :3001
 kill -9 <PID>
 ```
 
+For PostgreSQL port conflicts (6433), check for other containers:
+
+```bash
+docker ps | grep 6433
+```
+
 ### Prisma Client Not Found
 
 Run Prisma generate after schema changes:
 
 ```bash
 bun run prisma:generate
+```
+
+### Prisma Postinstall Scripts Not Running
+
+If you see warnings about postinstall scripts being blocked:
+
+```bash
+bun pm trust prisma
+bun pm trust @prisma/client
+bun pm trust @prisma/adapter-pg
+bun install
 ```
 
 ### TypeScript Path Aliases Not Working
