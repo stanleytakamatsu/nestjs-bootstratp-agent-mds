@@ -23,7 +23,7 @@
 
 ```bash
 bun install              # Install dependencies
-docker-compose up -d     # Start services (PostgreSQL)
+docker-compose up -d     # Start services
 bun run dev              # Dev server
 bun run test             # Run tests
 bun run lint             # Lint code

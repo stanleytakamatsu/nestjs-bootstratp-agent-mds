@@ -139,9 +139,7 @@ bun init -y
     "docker:logs": "docker compose logs -f",
     "docker:logs:app": "docker compose logs -f app",
     "docker:logs:db": "docker compose logs -f db",
-    "docker:exec:app": "docker compose exec app sh",
-    "vercel:build": "bun run prisma:generate && bun run build",
-    "vercel:migrate": "bun run prisma:migrate:deploy"
+    "docker:exec:app": "docker compose exec app sh"
   },
   "dependencies": {
     "@fastify/static": "^8.3.0",
@@ -356,14 +354,13 @@ DIRECT_URL=postgresql://postgres:postgres@localhost:6433/my-backend
 
 **Database URL Configuration:**
 
-| Environment     | DATABASE_URL                 | DIRECT_URL                 |
-| --------------- | ---------------------------- | -------------------------- |
-| Local Dev       | `localhost:6433`             | Same as DATABASE_URL       |
-| Docker (app)    | `db:5432` (internal network) | Same as DATABASE_URL       |
-| Neon            | Pooled (`-pooler` hostname)  | Direct (without `-pooler`) |
-| Supabase        | Pooler (port 6543)           | Direct (port 5432)         |
-| Vercel Postgres | Pooled connection            | Direct connection          |
-| Railway         | Direct connection            | Same as DATABASE_URL       |
+| Environment  | DATABASE_URL                 | DIRECT_URL                 |
+| ------------ | ---------------------------- | -------------------------- |
+| Local Dev    | `localhost:6433`             | Same as DATABASE_URL       |
+| Docker (app) | `db:5432` (internal network) | Same as DATABASE_URL       |
+| Neon         | Pooled (`-pooler` hostname)  | Direct (without `-pooler`) |
+| Supabase     | Pooler (port 6543)           | Direct (port 5432)         |
+| Railway      | Direct connection            | Same as DATABASE_URL       |
 
 ### 10. Create .env (copy from .env.example)
 
@@ -448,7 +445,7 @@ export default {
 
 **Why DIRECT_URL?**
 
-In serverless environments (Vercel, Neon, Supabase), database connections often go through a connection pooler (e.g., PgBouncer). While poolers are great for application queries, they don't support the transaction-based operations that Prisma migrations require.
+In serverless environments (Neon, Supabase), database connections often go through a connection pooler (e.g., PgBouncer). While poolers are great for application queries, they don't support the transaction-based operations that Prisma migrations require.
 
 - `DATABASE_URL`: Used by your application at runtime (can use pooled connections)
 - `DIRECT_URL`: Used by Prisma CLI for migrations (must bypass the pooler)
@@ -876,7 +873,7 @@ export class MyService {
 - `logger.debug()` - Debug information
 - `logger.verbose()` - Verbose output
 
-## Serverless Deployment (Vercel, Neon, etc.)
+## Serverless Deployment (Neon, Supabase, etc.)
 
 When deploying to serverless platforms, migrations require special handling because connection poolers don't support migration transactions.
 
@@ -890,40 +887,23 @@ DIRECT_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/mydb?sslmode=requi
 
 ### Running Migrations in CI/CD
 
-**Option 1: Vercel Build Command**
-
-In your Vercel project settings, set the build command to:
-
-```bash
-bun run vercel:build
-```
-
-And add a separate migration step (e.g., in GitHub Actions):
+Add a migration step in your CI/CD pipeline (e.g., GitHub Actions):
 
 ```yaml
 - name: Run migrations
-  run: bun run vercel:migrate
+  run: bun run prisma:migrate:deploy
   env:
     DIRECT_URL: ${{ secrets.DIRECT_URL }}
 ```
 
-**Option 2: Vercel CLI with Migration**
-
-```bash
-# Deploy with migrations
-bun run prisma:migrate:deploy && vercel --prod
-```
-
 ### Package.json Scripts Reference
 
-| Script                  | Purpose                                     |
-| ----------------------- | ------------------------------------------- |
-| `prisma:migrate`        | Create new migration (development)          |
-| `prisma:migrate:deploy` | Apply pending migrations (production)       |
-| `prisma:migrate:status` | Check migration status                      |
-| `prisma:migrate:reset`  | Reset database and reapply all migrations   |
-| `vercel:build`          | Generate Prisma client + build (for Vercel) |
-| `vercel:migrate`        | Deploy migrations (for CI/CD)               |
+| Script                  | Purpose                                   |
+| ----------------------- | ----------------------------------------- |
+| `prisma:migrate`        | Create new migration (development)        |
+| `prisma:migrate:deploy` | Apply pending migrations (production)     |
+| `prisma:migrate:status` | Check migration status                    |
+| `prisma:migrate:reset`  | Reset database and reapply all migrations |
 
 ### Checking Migration Status
 

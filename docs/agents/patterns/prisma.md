@@ -53,7 +53,7 @@ export default {
 DATABASE_URL=postgresql://user:pass@localhost:6433/mydb
 
 # DIRECT_URL: Direct connection for migrations (bypasses poolers)
-# Required for serverless deployments (Vercel, Neon, Supabase, etc.)
+# Required for serverless deployments (Neon, Supabase, etc.)
 DIRECT_URL=postgresql://user:pass@localhost:6433/mydb
 ```
 
@@ -61,12 +61,11 @@ DIRECT_URL=postgresql://user:pass@localhost:6433/mydb
 
 In serverless environments, database connections often go through a connection pooler (e.g., PgBouncer). While poolers are efficient for application queries, they don't support the transaction-based operations that Prisma migrations require.
 
-| Environment     | DATABASE_URL                | DIRECT_URL                 |
-| --------------- | --------------------------- | -------------------------- |
-| Local Dev       | Direct connection           | Same as DATABASE_URL       |
-| Neon            | Pooled (`-pooler` hostname) | Direct (without `-pooler`) |
-| Supabase        | Pooler (port 6543)          | Direct (port 5432)         |
-| Vercel Postgres | Pooled connection           | Direct connection          |
+| Environment | DATABASE_URL                | DIRECT_URL                 |
+| ----------- | --------------------------- | -------------------------- |
+| Local Dev   | Direct connection           | Same as DATABASE_URL       |
+| Neon        | Pooled (`-pooler` hostname) | Direct (without `-pooler`) |
+| Supabase    | Pooler (port 6543)          | Direct (port 5432)         |
 
 ### Required Dependencies
 
@@ -561,7 +560,7 @@ bun run db:push
 
 ### Serverless Deployment Migrations
 
-When deploying to serverless platforms (Vercel, Neon, Supabase), use the DIRECT_URL for migrations:
+When deploying to serverless platforms (Neon, Supabase), use the DIRECT_URL for migrations:
 
 ```bash
 # In CI/CD pipeline
@@ -569,16 +568,6 @@ bun run prisma:migrate:deploy
 ```
 
 The `prisma.config.ts` automatically uses `DIRECT_URL` for migrations, bypassing connection poolers.
-
-**Vercel Build Commands:**
-
-```bash
-# Build command
-bun run vercel:build  # prisma:generate && build
-
-# Separate migration step (in GitHub Actions or similar)
-bun run vercel:migrate  # prisma:migrate:deploy
-```
 
 ## Module Registration
 
