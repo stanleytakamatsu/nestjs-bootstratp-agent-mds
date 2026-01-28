@@ -12,7 +12,6 @@ This guide provides complete instructions for setting up a new NestJS backend pr
 - Docker container names
 - Database name
 - Application name in `.env`
-- Directory name
 
 **Ask the user:**
 
